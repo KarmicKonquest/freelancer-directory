@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { 
@@ -27,6 +27,11 @@ import {
 } from 'firebase/firestore';
 
 // --- Helper Functions & Configuration ---
+
+/**
+ * Firebase configuration object.
+ * @type {object}
+ */
 const firebaseConfig = {
   apiKey: "AIzaSyA769aw44I0Kdb7KkTheJbAezDAFJ_a58w",
   authDomain: "freelancer-directory.firebaseapp.com",
@@ -41,32 +46,75 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
-const appId = 'freelancer-directory'; 
+/**
+ * Application ID, used for namespacing Firebase paths.
+ * @type {string}
+ */
+const appId = 'freelancer-directory';
+
+/**
+ * Converts a string to title case.
+ * e.g., "hello world" becomes "Hello World".
+ * @param {string} str - The string to convert.
+ * @returns {string} The title-cased string.
+ */
 const toTitleCase = (str) => str ? str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()) : '';
 
 // --- IMPORTANT: MODERATOR CONFIGURATION ---
+/**
+ * The Firebase UID of the admin/moderator account.
+ * This UID is used to grant access to the AdminPage.
+ * @type {string}
+ */
 // PASTE THE USER UID OF YOUR ADMIN ACCOUNT HERE
 const ADMIN_UID = "9cCHy7jQRgXNdAPmqet9Mz4KDi12";
 
+/**
+ * Array of all available domains for freelancers.
+ * @type {string[]}
+ */
 const ALL_DOMAINS = ["design", "coding", "operations", "marketing", "sales", "finance", "hr", "legal"];
 
 // --- Icon Components ---
+// These are simple functional components that render SVG icons.
+
+/** Search icon component. */
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
+/** Map pin icon component. */
 const MapPinIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
+/** Link icon component. */
 const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>;
+/** Send icon component. */
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
+/** Log out icon component. */
 const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
+/** User icon component. */
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+/** Plus circle icon component. */
 const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>;
+/** Trash icon component. */
 const Trash2Icon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+/** Share icon component. */
 const Share2Icon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>;
+/** Eye icon (visible) component. */
 const EyeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+/** Eye off icon (hidden) component. */
 const EyeOffIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>;
+/** LinkedIn icon component. */
 const LinkedinIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>;
+/** Flag icon component (for reporting). */
 const FlagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>;
+/** Shield icon component (for admin). */
 const ShieldIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
 
 // --- Main App Component ---
+
+/**
+ * The main application component.
+ * Manages global state including user authentication, profile data,
+ * current page, loading status, and Firebase instances.
+ * It also handles routing between different pages of the application.
+ */
 function App() {
     const [user, setUser] = useState(null);
     const [profile, setProfile] = useState(null);
@@ -176,7 +224,13 @@ function App() {
             case 'login': return <LoginPage handleEmailSignUp={handleEmailSignUp} handleEmailLogin={handleEmailLogin} />;
             case 'admin':
                 if (user?.uid !== ADMIN_UID) return <p>Access Denied</p>;
-                return <AdminPage db={db} navigateToProfile={navigateToProfile} />;
+                // Lazily load AdminPage
+                const AdminPageComponent = lazy(() => import('./AdminPage.jsx'));
+                return (
+                    <Suspense fallback={<div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div></div>}>
+                        <AdminPageComponent db={db} navigateToProfile={navigateToProfile} />
+                    </Suspense>
+                );
             default: return <DirectoryPage db={db} navigateToProfile={navigateToProfile} locationData={locationData} />;
         }
     };
@@ -185,7 +239,10 @@ function App() {
         <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
             <Header user={user} profile={profile} setPage={setPage} handleLogout={handleLogout} />
             <main className="p-4 md:p-8">
-                {renderPage()}
+                {/* Suspense fallback for all page components if any of them were lazy-loaded at a higher level */}
+                <Suspense fallback={<div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div></div>}>
+                    {renderPage()}
+                </Suspense>
             </main>
             <Footer />
         </div>
@@ -193,6 +250,15 @@ function App() {
 }
 
 // --- Components (Pages) ---
+
+/**
+ * Header component displaying the site logo, navigation links, and user authentication status.
+ * @param {object} props - Component props.
+ * @param {object} props.user - Firebase user object.
+ * @param {object} props.profile - User's profile data.
+ * @param {function} props.setPage - Function to change the current page.
+ * @param {function} props.handleLogout - Function to log out the user.
+ */
 function Header({ user, profile, setPage, handleLogout }) {
     return (
         <header className="bg-white/80 backdrop-blur-lg sticky top-0 z-40 shadow-sm">
@@ -222,6 +288,14 @@ function Header({ user, profile, setPage, handleLogout }) {
     );
 }
 
+/**
+ * DirectoryPage component displays a list of freelancers.
+ * It allows users to search and filter freelancers based on various criteria.
+ * @param {object} props - Component props.
+ * @param {object} props.db - Firestore database instance.
+ * @param {function} props.navigateToProfile - Function to navigate to a freelancer's profile page.
+ * @param {object} props.locationData - Object containing countries and their cities.
+ */
 function DirectoryPage({ db, navigateToProfile, locationData }) {
     const [allFreelancers, setAllFreelancers] = useState([]);
     const [filteredFreelancers, setFilteredFreelancers] = useState([]);
@@ -243,26 +317,36 @@ function DirectoryPage({ db, navigateToProfile, locationData }) {
             const freelancersData = [];
             querySnapshot.forEach((doc) => { freelancersData.push({ id: doc.id, ...doc.data() }); });
             setAllFreelancers(freelancersData);
-            setFilteredFreelancers(freelancersData);
+            // setFilteredFreelancers(freelancersData); // Apply filters directly in useEffect instead
             setLoading(false);
         }, (error) => { console.error("Error fetching freelancers: ", error); setLoading(false); });
         return () => unsubscribe();
     }, [db]);
     
-    const handleFilterSubmit = (e) => {
-        e.preventDefault();
-        let results = allFreelancers;
-        if (searchTerm) results = results.filter(f => f.name?.toLowerCase().includes(searchTerm.toLowerCase()));
-        if (keywordTerm) results = results.filter(f => f.bio?.toLowerCase().includes(keywordTerm.toLowerCase()));
-        if (countryFilter) results = results.filter(f => f.country === countryFilter);
-        if (cityFilter) results = results.filter(f => f.city === cityFilter);
-        if (domainFilter) results = results.filter(f => f.domains?.includes(domainFilter));
-        setFilteredFreelancers(results);
-    };
+    // Debounced filtering logic
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            let results = allFreelancers;
+            if (searchTerm) results = results.filter(f => f.name?.toLowerCase().includes(searchTerm.toLowerCase()));
+            if (keywordTerm) results = results.filter(f => f.bio?.toLowerCase().includes(keywordTerm.toLowerCase()));
+            if (countryFilter) results = results.filter(f => f.country === countryFilter);
+            if (cityFilter) results = results.filter(f => f.city === cityFilter);
+            if (domainFilter) results = results.filter(f => f.domains?.includes(domainFilter));
+            setFilteredFreelancers(results);
+        }, 300); // 300ms debounce delay
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchTerm, keywordTerm, countryFilter, cityFilter, domainFilter, allFreelancers]);
+
+    // No longer need a separate submit handler for the form, as filters apply on change.
+    // The form tag can remain for layout/semantic purposes, or be replaced by a div.
+    // The button type="submit" can be changed to type="button" or removed if not needed.
 
     return (
         <div className="container mx-auto">
-            <form onSubmit={handleFilterSubmit} className="bg-white p-6 rounded-xl shadow-md mb-8 space-y-4">
+            <form onSubmit={(e) => e.preventDefault()} className="bg-white p-6 rounded-xl shadow-md mb-8 space-y-4">
                 <h1 className="text-3xl md:text-4xl font-bold mb-2 text-center">Find Top Freelance Talent</h1>
                 <p className="text-gray-600 text-center mb-6">Search our directory of vetted professionals.</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -272,20 +356,14 @@ function DirectoryPage({ db, navigateToProfile, locationData }) {
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">Country</label><select value={countryFilter} onChange={e => {setCountryFilter(e.target.value); setCityFilter('');}} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"><option value="">All Countries</option>{countries.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                     <div><label className="block text-sm font-medium text-gray-700 mb-1">City</label><select value={cityFilter} onChange={e => setCityFilter(e.target.value)} disabled={!countryFilter} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white disabled:bg-gray-100"><option value="">All Cities</option>{countryFilter && locationData[countryFilter].map(city => <option key={city} value={city}>{city}</option>)}</select></div>
                 </div>
-                <button type="submit" className="w-full mt-4 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">Search</button>
+                {/* The search button is now optional as filtering happens on input change (debounced) */}
+                {/* <button type="button" className="w-full mt-4 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">Search</button> */}
             </form>
 
             {loading ? (<p className="text-center">Loading freelancers...</p>) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredFreelancers.map(freelancer => (
-                        <div key={freelancer.id} onClick={() => navigateToProfile(freelancer)} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow cursor-pointer p-6 flex flex-col items-center text-center">
-                            <img src={`https://placehold.co/100x100/E2E8F0/4A5568?text=${freelancer.name.charAt(0)}`} alt={freelancer.name} className="w-24 h-24 rounded-full mb-4 border-4 border-white shadow-md" />
-                            <h3 className="font-bold text-lg">{freelancer.name}</h3>
-                            <div className="flex flex-wrap gap-1 justify-center mt-1">{freelancer.domains?.map(d => <span key={d} className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{toTitleCase(d)}</span>)}</div>
-                            <div className="flex items-center text-gray-500 text-sm mt-2"><MapPinIcon /><span className="ml-1">{freelancer.city}, {freelancer.country}</span></div>
-                            <p className="text-gray-600 mt-3 text-sm flex-grow">{freelancer.bio?.substring(0, 100)}{freelancer.bio?.length > 100 && '...'}</p>
-                            <button className="mt-4 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-xs font-semibold hover:bg-indigo-200 transition-colors">View Profile</button>
-                        </div>
+                        <FreelancerCard key={freelancer.id} freelancer={freelancer} navigateToProfile={navigateToProfile} />
                     ))}
                 </div>
             )}
@@ -294,6 +372,35 @@ function DirectoryPage({ db, navigateToProfile, locationData }) {
     );
 }
 
+/**
+ * FreelancerCard component displays a summary of a freelancer's profile.
+ * It is memoized to prevent unnecessary re-renders.
+ * @param {object} props - Component props.
+ * @param {object} props.freelancer - The freelancer data object.
+ * @param {function} props.navigateToProfile - Function to navigate to the freelancer's full profile.
+ */
+const FreelancerCard = React.memo(({ freelancer, navigateToProfile }) => {
+    return (
+        <div onClick={() => navigateToProfile(freelancer)} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow cursor-pointer p-6 flex flex-col items-center text-center">
+            <img src={`https://placehold.co/100x100/E2E8F0/4A5568?text=${freelancer.name.charAt(0)}`} alt={freelancer.name} className="w-24 h-24 rounded-full mb-4 border-4 border-white shadow-md" />
+            <h3 className="font-bold text-lg">{freelancer.name}</h3>
+            <div className="flex flex-wrap gap-1 justify-center mt-1">{freelancer.domains?.map(d => <span key={d} className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded-full">{toTitleCase(d)}</span>)}</div>
+            <div className="flex items-center text-gray-500 text-sm mt-2"><MapPinIcon /><span className="ml-1">{freelancer.city}, {freelancer.country}</span></div>
+            <p className="text-gray-600 mt-3 text-sm flex-grow">{freelancer.bio?.substring(0, 100)}{freelancer.bio?.length > 100 && '...'}</p>
+            <button className="mt-4 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-xs font-semibold hover:bg-indigo-200 transition-colors">View Profile</button>
+        </div>
+    );
+});
+
+/**
+ * ChatPage component provides a real-time public chat interface.
+ * Users with profiles can send messages. All users can view messages.
+ * @param {object} props - Component props.
+ * @param {object} props.db - Firestore database instance.
+ * @param {object} props.user - Firebase user object.
+ * @param {object} props.profile - User's profile data.
+ * @param {function} props.onProfileClick - Function to navigate to a user's profile from chat.
+ */
 function ChatPage({ db, user, profile, onProfileClick }) {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
@@ -303,9 +410,48 @@ function ChatPage({ db, user, profile, onProfileClick }) {
     useEffect(() => { if (!db) return; const q = query(collection(db, `/artifacts/${appId}/public/data/chat_messages`), orderBy("timestamp", "desc"), limit(50)); const unsub = onSnapshot(q, (snap) => { const msgs = []; snap.forEach(d => msgs.push({id: d.id, ...d.data()})); setMessages(msgs.reverse()); }); return () => unsub(); }, [db]);
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
     const handleSendMessage = async(e) => { e.preventDefault(); if(!user||user.isAnonymous||!profile||newMessage.trim()===""||isSending)return;const now=Date.now();if(now-lastMessageTime.current<5e3){alert(`Wait ${Math.ceil((5e3-(now-lastMessageTime.current))/1e3)}s`);return;}setIsSending(!0);lastMessageTime.current=now;try{await addDoc(collection(db,`/artifacts/${appId}/public/data/chat_messages`),{text:newMessage,timestamp:serverTimestamp(),userId:user.uid,userName:profile.name});setNewMessage("");}catch(err){console.error(err)}finally{setIsSending(!1)}}
-    return <div className="container mx-auto max-w-4xl"><div className="bg-white rounded-xl shadow-lg flex flex-col" style={{height:'75vh'}}><div className="p-4 border-b"><h2 className="text-xl font-bold text-center">Community Trollbox</h2></div><div className="flex-grow p-4 overflow-y-auto">{messages.map(msg=><div key={msg.id}className="flex items-start gap-3 mb-4"><div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-indigo-600 flex-shrink-0 cursor-pointer"onClick={()=>onProfileClick(msg.userId)}>{msg.userName?msg.userName.charAt(0):'?'}</div ><div><div className="flex items-baseline gap-2"><p className="font-bold text-indigo-700">{msg.userName||'Anonymous'}</p><p className="text-xs text-gray-400">{msg.timestamp?.toDate().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p></div><p className="text-gray-800 break-words">{msg.text}</p></div></div>)}<div ref={chatEndRef}/></div ><div className="p-4 border-t bg-gray-50"><form onSubmit={handleSendMessage}className="flex items-center gap-2"><input type="text"value={newMessage}onChange={e=>setNewMessage(e.target.value)}placeholder={user&&!user.isAnonymous&&profile?"Type...":"Login & create a profile to chat"}className="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"disabled={!user||user.isAnonymous||!profile||isSending}/><button type="submit"disabled={isSending||!newMessage.trim()}className="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors"><SendIcon /></button></form></div></div></div>
+    return <div className="container mx-auto max-w-4xl"><div className="bg-white rounded-xl shadow-lg flex flex-col" style={{height:'75vh'}}><div className="p-4 border-b"><h2 className="text-xl font-bold text-center">Community Trollbox</h2></div><div className="flex-grow p-4 overflow-y-auto">{messages.map(msg=><ChatMessageItem key={msg.id} msg={msg} onProfileClick={onProfileClick} />)}<div ref={chatEndRef}/></div ><div className="p-4 border-t bg-gray-50"><form onSubmit={handleSendMessage}className="flex items-center gap-2"><input type="text"value={newMessage}onChange={e=>setNewMessage(e.target.value)}placeholder={user&&!user.isAnonymous&&profile?"Type...":"Login & create a profile to chat"}className="w-full px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"disabled={!user||user.isAnonymous||!profile||isSending}/><button type="submit"disabled={isSending||!newMessage.trim()}className="bg-indigo-600 text-white p-3 rounded-full hover:bg-indigo-700 disabled:bg-indigo-300 transition-colors"><SendIcon /></button></form></div></div></div>
 }
 
+/**
+ * ChatMessageItem component displays a single chat message.
+ * It is memoized to prevent unnecessary re-renders.
+ * @param {object} props - Component props.
+ * @param {object} props.msg - The message data object.
+ * @param {function} props.onProfileClick - Function to navigate to the sender's profile.
+ */
+const ChatMessageItem = React.memo(({ msg, onProfileClick }) => {
+    return (
+        <div className="flex items-start gap-3 mb-4">
+            <div
+                className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center font-bold text-indigo-600 flex-shrink-0 cursor-pointer"
+                onClick={() => onProfileClick(msg.userId)}
+                title={`View ${msg.userName || 'Anonymous'}'s profile`}
+            >
+                {msg.userName ? msg.userName.charAt(0) : '?'}
+            </div>
+            <div>
+                <div className="flex items-baseline gap-2">
+                    <p className="font-bold text-indigo-700">{msg.userName || 'Anonymous'}</p>
+                    <p className="text-xs text-gray-400">
+                        {msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                </div>
+                <p className="text-gray-800 break-words">{msg.text}</p>
+            </div>
+        </div>
+    );
+});
+
+/**
+ * ProfilePage component displays the detailed profile of a freelancer.
+ * It shows their name, domains, location, bio, and links.
+ * Logged-in users can report profiles.
+ * @param {object} props - Component props.
+ * @param {object} props.profileData - The data of the profile to display.
+ * @param {object} props.user - Firebase user object (current user).
+ * @param {object} props.db - Firestore database instance.
+ */
 function ProfilePage({ profileData, user, db }) {
     if (!profileData) { return <div className="text-center">Profile not found. <button onClick={() => window.location.reload()} className="text-indigo-600">Go back to directory.</button></div> }
     
@@ -346,6 +492,18 @@ function ProfilePage({ profileData, user, db }) {
     );
 }
 
+/**
+ * EditProfilePage component allows users to create or update their freelancer profile.
+ * It includes fields for name, location, domains, bio, LinkedIn URL, and other links.
+ * Profile changes are submitted for admin approval.
+ * @param {object} props - Component props.
+ * @param {object} props.db - Firestore database instance.
+ * @param {object} props.user - Firebase user object (current user).
+ * @param {object} props.existingProfile - The user's current profile data, if it exists.
+ * @param {function} props.setPage - Function to change the current page.
+ * @param {function} props.setProfile - Function to update the user's profile state in App.js.
+ * @param {object} props.locationData - Object containing countries and their cities.
+ */
 function EditProfilePage({ db, user, existingProfile, setPage, setProfile, locationData }) {
     const [formData, setFormData] = useState({ name: '', email: '', country: '', city: '', domains: [], bio: '', linkedinUrl: '', links: [{ url: '' }] });
     const [isSaving, setIsSaving] = useState(false);
@@ -404,6 +562,13 @@ function EditProfilePage({ db, user, existingProfile, setPage, setProfile, locat
     );
 }
 
+/**
+ * LoginPage component handles user authentication.
+ * It provides forms for both email/password sign-up and login.
+ * @param {object} props - Component props.
+ * @param {function} props.handleEmailSignUp - Function to handle email sign-up.
+ * @param {function} props.handleEmailLogin - Function to handle email login.
+ */
 function LoginPage({ handleEmailSignUp, handleEmailLogin }) {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -415,107 +580,11 @@ function LoginPage({ handleEmailSignUp, handleEmailLogin }) {
 }
 
 // CHANGE: New Admin Page component
-function AdminPage({ db, navigateToProfile }) {
-    const [pendingProfiles, setPendingProfiles] = useState([]);
-    const [reportedProfiles, setReportedProfiles] = useState([]);
-    const [loading, setLoading] = useState(true);
+// The AdminPage component definition has been moved to src/AdminPage.jsx
 
-    useEffect(() => {
-        if (!db) return;
-        setLoading(true);
-
-        const pendingQuery = query(collection(db, `/artifacts/${appId}/public/data/profiles`), where("status", "==", "pending"));
-        const reportsQuery = query(collection(db, `/artifacts/${appId}/public/data/reports`), where("status", "==", "new"));
-
-        const unsubPending = onSnapshot(pendingQuery, (snap) => {
-            const profiles = [];
-            snap.forEach(doc => profiles.push({ id: doc.id, ...doc.data() }));
-            setPendingProfiles(profiles);
-        });
-
-        const unsubReports = onSnapshot(reportsQuery, (snap) => {
-            const reports = [];
-            snap.forEach(doc => reports.push({ id: doc.id, ...doc.data() }));
-            setReportedProfiles(reports);
-        });
-        
-        setLoading(false);
-        return () => {
-            unsubPending();
-            unsubReports();
-        };
-    }, [db]);
-
-    const handleApprove = async (profileId) => {
-        const publicDocRef = doc(db, `/artifacts/${appId}/public/data/profiles`, profileId);
-        await updateDoc(publicDocRef, { status: 'approved' });
-        // FIX: Also update the private user profile to keep data consistent
-        const privateDocRef = doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`);
-        await updateDoc(privateDocRef, { status: 'approved' });
-        alert('Profile approved!');
-    };
-    
-    const handleReject = async (profileId) => {
-        if (window.confirm("Are you sure you want to reject and delete this profile? This cannot be undone.")) {
-            await deleteDoc(doc(db, `/artifacts/${appId}/public/data/profiles`, profileId));
-            await deleteDoc(doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`));
-            alert('Profile rejected and deleted.');
-        }
-    };
-    
-    const handleDismissReport = async (reportId) => {
-        await deleteDoc(doc(db, `/artifacts/${appId}/public/data/reports`, reportId));
-        alert('Report dismissed.');
-    };
-
-    if (loading) return <p>Loading admin data...</p>;
-
-    return (
-        <div className="container mx-auto space-y-12">
-            <div>
-                <h1 className="text-3xl font-bold mb-4 border-b pb-2">Admin Dashboard</h1>
-            </div>
-            {/* Pending Profiles Section */}
-            <div>
-                <h2 className="text-2xl font-bold mb-4">Pending Profiles for Approval ({pendingProfiles.length})</h2>
-                <div className="space-y-4">
-                    {pendingProfiles.length > 0 ? pendingProfiles.map(p => (
-                        <div key={p.id} className="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
-                            <div>
-                                <p className="font-bold">{p.name}</p>
-                                <p className="text-sm text-gray-600">{p.city}, {p.country}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => navigateToProfile(p.id)} className="bg-gray-200 text-gray-800 px-3 py-1 rounded text-sm font-semibold">View</button>
-                                <button onClick={() => handleApprove(p.id)} className="bg-green-500 text-white px-3 py-1 rounded text-sm font-semibold">Approve</button>
-                                <button onClick={() => handleReject(p.id)} className="bg-red-500 text-white px-3 py-1 rounded text-sm font-semibold">Reject</button>
-                            </div>
-                        </div>
-                    )) : <p>No pending profiles.</p>}
-                </div>
-            </div>
-             {/* Reported Profiles Section */}
-             <div>
-                <h2 className="text-2xl font-bold mb-4">Reported Profiles ({reportedProfiles.length})</h2>
-                <div className="space-y-4">
-                    {reportedProfiles.length > 0 ? reportedProfiles.map(r => (
-                        <div key={r.id} className="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
-                            <div>
-                                <p className="font-bold">{r.reportedProfileName}</p>
-                                <p className="text-sm text-gray-500">Reported on: {r.timestamp?.toDate().toLocaleDateString()}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => navigateToProfile(r.reportedProfileId)} className="bg-gray-200 text-gray-800 px-3 py-1 rounded text-sm font-semibold">View Profile</button>
-                                <button onClick={() => handleDismissReport(r.id)} className="bg-blue-500 text-white px-3 py-1 rounded text-sm font-semibold">Dismiss Report</button>
-                            </div>
-                        </div>
-                    )) : <p>No new reports.</p>}
-                </div>
-            </div>
-        </div>
-    );
-}
-
+/**
+ * Footer component displaying copyright information.
+ */
 function Footer() {
     return (<footer className="text-center py-6 mt-12 border-t"><p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} FreelancerDirectory. All rights reserved.</p></footer>);
 }
