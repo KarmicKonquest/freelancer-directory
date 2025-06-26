@@ -1,6 +1,8 @@
 import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 
+// Removed duplicate imports of React and FormattedMessage
+
 function BlogIndexPage({ hubType }) {
     const intl = useIntl();
     let titleId = "blog.title.general";

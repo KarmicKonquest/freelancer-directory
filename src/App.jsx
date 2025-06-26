@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
+// Removed potential duplicate ReCAPTCHA import from here if it existed.
+// The primary one should be added/kept below, ensuring only one.
 import { initializeApp } from 'firebase/app';
+// Ensure ReCAPTCHA is imported ONCE, here.
+import ReCAPTCHA from "react-google-recaptcha";
 import { getAnalytics } from "firebase/analytics";
 import { 
     getAuth, 
@@ -693,7 +697,7 @@ function ProfilePage({ profileData, user, db, setPage }) {
     );
 }
 
-import ReCAPTCHA from "react-google-recaptcha"; // Added
+// Removed import ReCAPTCHA from "react-google-recaptcha"; // From before EditProfilePage
 
 function EditProfilePage({ db, user, existingProfile, setPage, setProfile, locationData }) {
     const intl = useIntl();
@@ -922,16 +926,18 @@ function EditProfilePage({ db, user, existingProfile, setPage, setProfile, locat
     );
 }
 
+// Removed import ReCAPTCHA from "react-google-recaptcha"; // From before LoginPage
+
 function LoginPage({ handleEmailSignUp, handleEmailLogin }) {
     const intl = useIntl();
     const [isLogin, setIsLogin] = useState(true);
-import ReCAPTCHA from "react-google-recaptcha"; // Import reCAPTCHA
+    // import ReCAPTCHA from "react-google-recaptcha"; // Removed from here
 
 // ... (other code for LoginPage)
 
-function LoginPage({ handleEmailSignUp, handleEmailLogin }) {
-    const intl = useIntl();
-    const [isLogin, setIsLogin] = useState(true);
+// function LoginPage({ handleEmailSignUp, handleEmailLogin }) { // This line was part of the erroneous diff
+//     const intl = useIntl();
+//     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
