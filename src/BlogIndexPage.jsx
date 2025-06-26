@@ -1,7 +1,4 @@
 import React from 'react';
-import { FormattedMessage } from 'react-intl';
-
-import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 
 function BlogIndexPage({ hubType }) {
