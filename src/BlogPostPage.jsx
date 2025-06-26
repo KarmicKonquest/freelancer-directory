@@ -1,8 +1,7 @@
 import React from 'react';
-import { FormattedMessage } from 'react-intl';
-
-import React from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
+
+// Removed duplicate imports of React and FormattedMessage
 
 function BlogPostPage({ postId }) {
     const intl = useIntl();
