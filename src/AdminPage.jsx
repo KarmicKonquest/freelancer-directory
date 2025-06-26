@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 
 // IMPORTANT: This appId is duplicated from App.jsx. Consider centralizing if it's used in more places.
-const appId = 'freelancer-directory';
+const appId = 'lancerpages'; // Updated
 
 /**
  * AdminPage component provides an interface for administrators.
@@ -25,63 +25,211 @@ const appId = 'freelancer-directory';
 function AdminPage({ db, navigateToProfile }) {
     const [pendingProfiles, setPendingProfiles] = useState([]);
     const [reportedProfiles, setReportedProfiles] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [allUserProfiles, setAllUserProfiles] = useState([]); // New state for all users
+    const [loading, setLoading] = useState({
+        pending: true,
+        reports: true,
+        allUsers: true
+    });
+
+    const updateLoadingState = (key, value) => {
+        setLoading(prev => ({ ...prev, [key]: value }));
+    };
 
     useEffect(() => {
         if (!db) {
-            setLoading(false); // Set loading to false if db is not available
+            setLoading({ pending: false, reports: false, allUsers: false });
             return;
         }
-        setLoading(true);
 
+        updateLoadingState('pending', true);
         const pendingQuery = query(collection(db, `/artifacts/${appId}/public/data/profiles`), where("status", "==", "pending"));
-        const reportsQuery = query(collection(db, `/artifacts/${appId}/public/data/reports`), where("status", "==", "new"));
-
         const unsubPending = onSnapshot(pendingQuery, (snap) => {
             const profiles = [];
             snap.forEach(doc => profiles.push({ id: doc.id, ...doc.data() }));
             setPendingProfiles(profiles);
-            setLoading(false); // Stop loading after pending profiles are fetched
+            updateLoadingState('pending', false);
         }, (error) => {
             console.error("Error fetching pending profiles:", error);
-            setLoading(false);
+            updateLoadingState('pending', false);
         });
 
+        updateLoadingState('reports', true);
+        const reportsQuery = query(collection(db, `/artifacts/${appId}/public/data/reports`), where("status", "==", "new"));
         const unsubReports = onSnapshot(reportsQuery, (snap) => {
             const reports = [];
             snap.forEach(doc => reports.push({ id: doc.id, ...doc.data() }));
             setReportedProfiles(reports);
-            // Potentially set loading to false here as well if this is the last data to fetch
+            updateLoadingState('reports', false);
         }, (error) => {
             console.error("Error fetching reported profiles:", error);
-            // setLoading(false); // Consider if this is needed
+            updateLoadingState('reports', false);
         });
 
-        // Combined loading state management: set loading to false once both snapshots are initially processed
-        // For simplicity, current implementation sets loading false after pending profiles.
-        // A more robust solution might use Promise.all or count initial loads.
+        updateLoadingState('allUsers', true);
+        // Fetch all profiles (public data used as a proxy for all users who interacted with profile system)
+        // This will include pending, approved, rejected etc.
+        const allUsersQuery = query(collection(db, `/artifacts/${appId}/public/data/profiles`));
+        const unsubAllUsers = onSnapshot(allUsersQuery, (snap) => {
+            const users = [];
+            snap.forEach(doc => users.push({ id: doc.id, ...doc.data() }));
+            setAllUserProfiles(users);
+            updateLoadingState('allUsers', false);
+        }, (error) => {
+            console.error("Error fetching all user profiles:", error);
+            updateLoadingState('allUsers', false);
+        });
 
         return () => {
             unsubPending();
             unsubReports();
+            unsubAllUsers();
         };
     }, [db]);
 
-    const handleApprove = async (profileId) => {
+    const isLoading = loading.pending || loading.reports || loading.allUsers;
+
+    const handleUpdateProfileStatus = async (profileId, newStatus) => {
         if (!db) return;
-        const publicDocRef = doc(db, `/artifacts/${appId}/public/data/profiles`, profileId);
-        await updateDoc(publicDocRef, { status: 'approved' });
-        const privateDocRef = doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`);
-        await updateDoc(privateDocRef, { status: 'approved' });
-        alert('Profile approved!');
+        const publicProfileRef = doc(db, `/artifacts/${appId}/public/data/profiles`, profileId);
+        const userProfileRef = doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`);
+
+        try {
+            await updateDoc(publicProfileRef, { status: newStatus });
+            await updateDoc(userProfileRef, { status: newStatus }, { merge: true }).catch(error => { // Added merge:true
+                if (error.code === 'not-found') {
+                    console.warn(`Private profile for ${profileId} not found. Status only updated on public profile.`);
+                } else {
+                    console.error("Error updating user's private profile status:", error);
+                }
+            });
+            alert(`Profile ${profileId} status updated to ${newStatus}.`);
+        } catch (error) {
+            console.error("Error updating profile status:", error);
+            alert(`Failed to update profile status for ${profileId}.`);
+        }
     };
 
-    const handleReject = async (profileId) => {
+    const handleTogglePaymentStatus = async (profileId, currentStatus) => {
         if (!db) return;
-        if (window.confirm("Are you sure you want to reject and delete this profile? This cannot be undone.")) {
+        const userProfileRef = doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`);
+        const newPaymentStatus = !currentStatus; // Toggle boolean 'hasContactAccess'
+        try {
+            await updateDoc(userProfileRef, { hasContactAccess: newPaymentStatus });
+            alert(`Payment status (contact access) for ${profileId} set to ${newPaymentStatus}.`);
+            setAllUserProfiles(prevProfiles => prevProfiles.map(p =>
+                p.id === profileId ? { ...p, hasContactAccess: newPaymentStatus } : p
+            ));
+        } catch (error) {
+             if (error.code === 'not-found') {
+                try {
+                    await setDoc(userProfileRef, { hasContactAccess: newPaymentStatus, userId: profileId }, { merge: true });
+                    alert(`Payment status for ${profileId} set to ${newPaymentStatus}. (Profile created)`);
+                    setAllUserProfiles(prevProfiles => prevProfiles.map(p =>
+                        p.id === profileId ? { ...p, hasContactAccess: newPaymentStatus } : p
+                    ));
+                } catch (setEror) {
+                    console.error("Error creating user profile with payment status:", setEror);
+                    alert(`Failed to set payment status for ${profileId}.`);
+                }
+            } else {
+                console.error("Error toggling payment status:", error);
+                alert(`Failed to toggle payment status for ${profileId}.`);
+            }
+        }
+    };
+
+    const handleToggleTrollboxAccess = async (profileId, currentAccess) => {
+        if (!db) return;
+        const userProfileRef = doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`);
+        const newAccessStatus = !currentAccess;
+        try {
+            // Ensure the document exists before updating, or create it with the field.
+            // For simplicity, we'll attempt an update and if it fails due to not-found, we can set it.
+            // However, a user should ideally have a private profile document if they are a user.
+            await updateDoc(userProfileRef, { canAccessTrollbox: newAccessStatus });
+            alert(`Trollbox access for ${profileId} set to ${newAccessStatus}.`);
+             // Force re-fetch or update local state for allUserProfiles to reflect change
+            setAllUserProfiles(prevProfiles => prevProfiles.map(p =>
+                p.id === profileId ? { ...p, canAccessTrollbox: newAccessStatus } : p
+            ));
+        } catch (error) {
+            if (error.code === 'not-found') {
+                 // If private profile doesn't exist, create it with the trollbox access field
+                try {
+                    await setDoc(userProfileRef, { canAccessTrollbox: newAccessStatus, userId: profileId }, { merge: true });
+                    alert(`Trollbox access for ${profileId} set to ${newAccessStatus}. (Profile created)`);
+                    setAllUserProfiles(prevProfiles => prevProfiles.map(p =>
+                        p.id === profileId ? { ...p, canAccessTrollbox: newAccessStatus } : p
+                    ));
+                } catch (setEror) {
+                    console.error("Error creating user profile with trollbox status:", setEror);
+                    alert(`Failed to set Trollbox access for ${profileId}.`);
+                }
+            } else {
+                console.error("Error toggling Trollbox access:", error);
+                alert(`Failed to toggle Trollbox access for ${profileId}.`);
+            }
+        }
+    };
+
+    const handleApprove = async (profileId) => {
+        await handleUpdateProfileStatus(profileId, 'approved');
+    };
+
+    const handleReject = async (profileId) => { // This function also deletes, might need to separate concerns later
+        if (!db) return;
+        if (window.confirm("Are you sure you want to reject and PERMANENTLY DELETE this profile? This cannot be undone.")) {
+            try {
+                await deleteDoc(doc(db, `/artifacts/${appId}/public/data/profiles`, profileId));
+                // Try to delete the private profile as well, if it exists
+                await deleteDoc(doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`)).catch(error => {
+                     if (error.code !== 'not-found') console.error("Error deleting user's private profile:", error);
+                });
+                alert('Profile rejected and deleted.');
+            } catch (error) {
+                console.error("Error deleting profile:", error);
+                alert("Failed to delete profile.");
+            }
+        }
+    };
+
+    const handlePermanentDeleteUser = async (profileId, userEmail) => {
+        if (!db) return;
+        if (!window.confirm(`Are you sure you want to PERMANENTLY DELETE user ${profileId} (${userEmail || 'No Email'}) and blacklist their email? This cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            // 1. Delete public profile
             await deleteDoc(doc(db, `/artifacts/${appId}/public/data/profiles`, profileId));
-            await deleteDoc(doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`));
-            alert('Profile rejected and deleted.');
+
+            // 2. Delete private profile data
+            await deleteDoc(doc(db, `/artifacts/${appId}/users/${profileId}/profile/data`)).catch(error => {
+                if (error.code !== 'not-found') console.error(`Error deleting private profile for ${profileId}:`, error);
+                else console.log(`Private profile for ${profileId} not found, skipping delete.`);
+            });
+
+            // 3. Add email to blacklist (if email exists)
+            if (userEmail) {
+                const blacklistRef = doc(db, `/blacklistedEmails/${userEmail}`);
+                await setDoc(blacklistRef, { email: userEmail, blacklistedAt: serverTimestamp() });
+                console.log(`Email ${userEmail} added to blacklist.`);
+            }
+
+            // 4. Firebase Auth user deletion - IMPORTANT: Needs to be handled by a backend (e.g., Cloud Function)
+            // For now, we'll just log this and show an alert.
+            console.warn(`Firebase Auth user deletion for ${profileId} needs to be handled by a backend function.`);
+            alert(`User data for ${profileId} deleted from Firestore and email blacklisted (if provided). Auth user deletion requires backend action.`);
+
+            // Refresh the user list locally
+            setAllUserProfiles(prevProfiles => prevProfiles.filter(p => p.id !== profileId));
+            setPendingProfiles(prevProfiles => prevProfiles.filter(p => p.id !== profileId));
+
+
+        } catch (error) {
+            console.error(`Error during permanent delete for ${profileId}:`, error);
+            alert(`Failed to fully delete user ${profileId}. Check console for details.`);
         }
     };
 
@@ -91,7 +239,7 @@ function AdminPage({ db, navigateToProfile }) {
         alert('Report dismissed.');
     };
 
-    if (loading) return <div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div></div>;
+    if (isLoading) return <div className="flex justify-center items-center h-screen"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500"></div></div>;
     if (!db) return <p>Error: Database not available. Please try again later.</p>;
 
 
@@ -100,8 +248,68 @@ function AdminPage({ db, navigateToProfile }) {
             <div>
                 <h1 className="text-3xl font-bold mb-4 border-b pb-2">Admin Dashboard</h1>
             </div>
-            {/* Pending Profiles Section */}
+
+            {/* All User Profiles Section */}
             <div>
+                <h2 className="text-2xl font-bold mb-4">All User Profiles ({allUserProfiles.length})</h2>
+                <div className="space-y-4 max-h-[500px] overflow-y-auto bg-gray-50 p-4 rounded-lg shadow">
+                    {allUserProfiles.length > 0 ? allUserProfiles.map(p => (
+                        <div key={p.id} className="bg-white p-4 rounded-lg shadow-md ">
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                                <div className="mb-2 sm:mb-0">
+                                    <p className="font-bold text-lg">{p.name || <span className="italic text-gray-500">No name</span>} <span className="text-sm font-normal text-gray-600">({p.status || 'N/A'})</span></p>
+                                    <p className="text-xs text-gray-500">UID: {p.id}</p>
+                                    <p className="text-sm text-gray-600">{p.email || <span className="italic text-gray-500">No email</span>}</p>
+                                </div>
+                                <div className="flex gap-2 flex-wrap items-center">
+                                     <button onClick={() => navigateToProfile(p.id)} className="bg-gray-200 text-gray-800 px-3 py-1 rounded text-xs font-semibold hover:bg-gray-300">View Profile</button>
+                                    <select
+                                        value={p.status || ''}
+                                        onChange={(e) => handleUpdateProfileStatus(p.id, e.target.value)}
+                                        className="text-xs border-gray-300 rounded shadow-sm p-1 bg-white focus:ring-indigo-500 focus:border-indigo-500"
+                                    >
+                                        <option value="pending">Pending</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="rejected">Rejected (Will Delete)</option>
+                                        {/* 'rejected' status will trigger deletion via handleReject if selected from pending,
+                                            or can be a soft "hidden" if we adapt handleUpdate to not delete for 'rejected'*/}
+                                        <option value="hidden">Hidden</option>
+                                    </select>
+                                    <button
+                                        onClick={() => handleToggleTrollboxAccess(p.id, p.canAccessTrollbox === undefined ? true : p.canAccessTrollbox)}
+                                        className={`px-3 py-1 rounded text-xs font-semibold ${p.canAccessTrollbox === undefined || p.canAccessTrollbox ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                                        title={p.canAccessTrollbox === undefined || p.canAccessTrollbox ? "Revoke Trollbox Access" : "Grant Trollbox Access"}
+                                    >
+                                        {p.canAccessTrollbox === undefined || p.canAccessTrollbox ? 'Revoke Chat' : 'Grant Chat'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleTogglePaymentStatus(p.id, p.hasContactAccess)}
+                                        className={`px-3 py-1 rounded text-xs font-semibold ${p.hasContactAccess ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                                        title={p.hasContactAccess ? "Mark as Unpaid/Revoke Access" : "Mark as Paid/Grant Access"}
+                                    >
+                                        {p.hasContactAccess ? 'Revoke Payment' : 'Grant Payment'}
+                                    </button>
+                                    <button
+                                        onClick={() => handlePermanentDeleteUser(p.id, p.email)}
+                                        className="bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-red-700"
+                                        title="Permanently delete user data and blacklist email"
+                                    >
+                                        Delete User
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="mt-2 text-xs space-y-1">
+                                <p><strong>Directory Status:</strong> <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.status === 'approved' ? 'bg-green-100 text-green-800' : (p.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : (p.status === 'hidden' ? 'bg-gray-100 text-gray-800' : 'bg-red-100 text-red-800'))}`}>{p.status || 'N/A'}</span></p>
+                                <p><strong>Trollbox Access:</strong> <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.canAccessTrollbox === undefined || p.canAccessTrollbox ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{p.canAccessTrollbox === undefined || p.canAccessTrollbox ? 'Allowed' : 'Revoked'}</span></p>
+                                <p><strong>Payment (Contact Access):</strong> <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${p.hasContactAccess ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>{p.hasContactAccess ? 'Paid/Access Granted' : 'Not Paid/No Access'}</span></p>
+                            </div>
+                        </div>
+                    )) : <p>No user profiles found.</p>}
+                </div>
+            </div>
+
+            {/* Pending Profiles Section */}
+            <div className="mt-12">
                 <h2 className="text-2xl font-bold mb-4">Pending Profiles for Approval ({pendingProfiles.length})</h2>
                 <div className="space-y-4">
                     {pendingProfiles.length > 0 ? pendingProfiles.map(p => (
