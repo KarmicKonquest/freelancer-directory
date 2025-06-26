@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { FormattedMessage, useIntl } from 'react-intl';
+import { FormattedMessage, useIntl, IntlProvider } from 'react-intl'; // Added IntlProvider
+import enMessages from './locales/en.json'; // Import messages
+
 // Removed potential duplicate ReCAPTCHA import from here if it existed.
 // The primary one should be added/kept below, ensuring only one.
 import { initializeApp } from 'firebase/app';
@@ -80,8 +82,13 @@ const blockNonEssentialScripts = () => {
   // Example: window['ga-disable-YOUR_GA_MEASUREMENT_ID'] = true;
 };
 
+// Define messages and language for AppWrapper
+const messages = {
+  'en': enMessages,
+};
+const language = navigator.language.split(/[-_]/)[0] || 'en';
 
-function App() {
+function CoreApp() { // Renamed App to CoreApp
     const intl = useIntl();
     const [user, setUser] = useState(null);
     const [profile, setProfile] = useState(null);
@@ -220,7 +227,7 @@ function App() {
     }, [page, db, intl, appId]);
 
     const renderPage = () => {
-        if (loading && !page.startsWith('profile/')) {
+        if (loading && page !== 'admin' && !page.startsWith('profile/')) {
             return <PageLoader />;
         }
 
@@ -1026,4 +1033,11 @@ function Footer({ setPage }) {
     );
 }
 
-export default App;
+// New AppWrapper component that includes IntlProvider
+export default function AppWrapper() {
+    return (
+        <IntlProvider locale={language} messages={messages[language] || messages.en}>
+            <CoreApp />
+        </IntlProvider>
+    );
+}
