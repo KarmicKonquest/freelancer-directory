@@ -52,6 +52,46 @@ const domainsOfExpertise = ["Design", "Coding", "Operations", "Marketing", "Sale
 
 // --- Helper Components ---
 
+const Header = ({ user, setPage }) => {
+    const handleSignOut = async () => {
+        await signOut(auth);
+    };
+
+    return (
+        <header className="bg-primary-background shadow-md">
+            <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+                <div className="flex items-center">
+                    <div className="w-8 h-8 bg-primary-accent rounded-full mr-2"></div>
+                    <h1 className="text-2xl font-bold text-primary-text">LancerPages</h1>
+                </div>
+                <nav className="hidden md:flex items-center space-x-6">
+                    <a href="#directory" className="flex items-center text-primary-text hover:text-primary-accent transition">
+                        <Search size={20} className="mr-2" />
+                        Directory
+                    </a>
+                    <a href="#chatbox" className="flex items-center text-primary-text hover:text-primary-accent transition">
+                        <MessageSquare size={20} className="mr-2" />
+                        Community
+                    </a>
+                </nav>
+                <div className="flex items-center">
+                    {user && !user.isAnonymous ? (
+                        <>
+                            <button onClick={() => setPage('profile')} className="text-primary-text hover:text-primary-accent mr-4">My Profile</button>
+                            <button onClick={handleSignOut} className="bg-secondary-background text-primary-text py-2 px-4 rounded-lg hover:bg-opacity-80 transition">Sign Out</button>
+                        </>
+                    ) : (
+                        <>
+                            <a href="#login" className="bg-secondary-background text-primary-text py-2 px-4 rounded-lg hover:bg-opacity-80 transition mr-2">Sign In</a>
+                            <a href="#login" className="bg-primary-accent text-primary-text py-2 px-4 rounded-lg hover:bg-opacity-80 transition">Sign Up</a>
+                        </>
+                    )}
+                </div>
+            </div>
+        </header>
+    );
+};
+
 const GDPRBanner = () => {
     const [visible, setVisible] = useState(false);
     useEffect(() => {
@@ -129,55 +169,36 @@ const Captcha = ({ onVerify }) => {
     );
 };
 
-const BottomNavBar = ({ user, setPage }) => {
-    return (
-        <nav className="bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
-            <div className="container mx-auto flex justify-around items-center h-16">
-                <a href="#home" className="flex flex-col items-center justify-center text-[var(--text-primary)] opacity-70 hover:opacity-100 transition w-20">
-                    <Home size={20} />
-                    <span className="text-xs mt-1">Home</span>
-                </a>
-                <a href="#directory" className="flex flex-col items-center justify-center text-[var(--text-primary)] opacity-70 hover:opacity-100 transition w-20">
-                    <Search size={20} />
-                    <span className="text-xs mt-1">Directory</span>
-                </a>
-                <a href="#chatbox" className="flex flex-col items-center justify-center text-[var(--text-primary)] opacity-70 hover:opacity-100 transition w-20">
-                    <MessageSquare size={20} />
-                    <span className="text-xs mt-1">Chatbox</span>
-                </a>
-                {user && !user.isAnonymous && (
-                    <button onClick={() => setPage('profile')} className="flex flex-col items-center justify-center text-[var(--text-primary)] opacity-70 hover:opacity-100 transition w-20">
-                        <User size={20} />
-                        <span className="text-xs mt-1">Profile</span>
-                    </button>
-                )}
-            </div>
-        </nav>
-    );
-};
 
 // --- Page & Section Components ---
 
 const HomePageBanner = () => {
-    const changingTexts = ["clients to find freelancers for their projects.", "freelancers to get visibility and leads.", "freelancers and clients to work together without middlemen"];
-    const [currentIndex, setCurrentIndex] = useState(0);
-
-    useEffect(() => {
-        const interval = setInterval(() => setCurrentIndex(prev => (prev + 1) % changingTexts.length), 4000);
-        return () => clearInterval(interval);
-    }, []);
-
     return (
-        <section id="home" className="min-h-screen flex flex-col items-center justify-center text-center p-4 bg-[var(--bg-primary)] text-[var(--text-primary)]">
-            <h1 className="text-4xl md:text-6xl font-serif font-bold mb-4">Lancerpages is the easiest way for...</h1>
-            <div className="relative h-20 mb-8 w-full max-w-3xl">
-                {changingTexts.map((text, index) => (
-                    <p key={index} className={`absolute w-full top-0 left-0 text-xl md:text-2xl text-[var(--color-accent)] transition-opacity duration-1000 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}>{text}</p>
-                ))}
+        <section id="home" className="min-h-screen flex flex-col items-center justify-center text-center p-4 bg-primary-background text-primary-text">
+            <h1 className="text-5xl md:text-7xl font-bold mb-4">
+                The Global Directory for<br />
+                <span className="text-primary-accent">Freelance Professionals and clients</span>
+            </h1>
+            <p className="max-w-3xl mx-auto mb-8 text-lg text-secondary-text">
+                Connect directly with skilled freelancers worldwide. No middlemen, no commission fees, no lengthy signups, just pure talent discovery.
+            </p>
+            <div className="flex justify-center space-x-8 mb-8">
+                <div className="flex items-center space-x-2">
+                    <Search size={24} className="text-primary-accent" />
+                    <span className="text-primary-text">Search by location</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <XCircle size={24} className="text-primary-accent" />
+                    <span className="text-primary-text">Zero Fees</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <MessageSquare size={24} className="text-primary-accent" />
+                    <span className="text-primary-text">Direct Contact</span>
+                </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-8 text-left mt-8 max-w-4xl">
-                 <div className="bg-[var(--bg-secondary)] p-6 rounded-lg border border-[var(--border-color)]"><h2 className="text-3xl font-serif font-semibold mb-3 text-[var(--color-accent)] opacity-90">For Freelancers</h2><p className="text-[var(--text-primary)] opacity-80">Create a profile in seconds, get leads directly, and chat with the community.</p></div>
-                 <div className="bg-[var(--bg-secondary)] p-6 rounded-lg border border-[var(--border-color)]"><h2 className="text-3xl font-serif font-semibold mb-3 text-[var(--color-accent)] opacity-90">For Clients</h2><p className="text-[var(--text-primary)] opacity-80">Browse and connect with freelancers directly. Pay a small one-time fee to get their contact details.</p></div>
+            <div className="flex justify-center space-x-4">
+                <a href="#directory" className="bg-primary-accent text-primary-text py-3 px-6 rounded-lg hover:bg-opacity-80 transition">Browse Freelancers</a>
+                <a href="#login" className="bg-secondary-background text-primary-text py-3 px-6 rounded-lg hover:bg-opacity-80 transition">Join as Freelancer</a>
             </div>
         </section>
     );
@@ -263,12 +284,13 @@ const ChatboxSection = ({ user, profile, authReady }) => {
     const [loading, setLoading] = useState(true);
     const [lastPostTime, setLastPostTime] = useState(0);
     const [cooldown, setCooldown] = useState(0);
+    const [activeTab, setActiveTab] = useState('liveChat'); // 'liveChat' or 'jobs'
 
     useEffect(() => {
         if (!authReady) return;
         const q = query(collection(db, `artifacts/${appId}/public/data/chatbox`), orderBy("timestamp", "desc"), limit(50));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).reverse();
+            const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp?.toDate() })).reverse();
             setMessages(msgs); setLoading(false);
         }, (error) => {
             console.error("Chatbox fetch error:", error);
@@ -295,7 +317,7 @@ const ChatboxSection = ({ user, profile, authReady }) => {
         const canPost = user && !user.isAnonymous && profile?.status === 'approved';
         if (!newMessage.trim() || !canPost) return;
 
-        await addDoc(collection(db, `artifacts/${appId}/public/data/chatbox`), { text: newMessage, timestamp: serverTimestamp(), uid: user.uid, name: profile.name || 'Anonymous', roles: profile.roles || {} });
+        await addDoc(collection(db, `artifacts/${appId}/public/data/chatbox`), { text: newMessage, timestamp: serverTimestamp(), uid: user.uid, name: profile.name || 'Anonymous', roles: profile.roles || {}, type: activeTab });
         setNewMessage('');
         setLastPostTime(now);
         setCooldown(30);
@@ -303,32 +325,58 @@ const ChatboxSection = ({ user, profile, authReady }) => {
 
     const canPost = user && !user.isAnonymous && profile?.status === 'approved';
 
+    const formatTimestamp = (date) => {
+        if (!date) return '';
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + " years ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + " months ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + " days ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + " hours ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + " min ago";
+        return Math.floor(seconds) + " sec ago";
+    }
+
+    const filteredMessages = messages.filter(msg => (activeTab === 'liveChat' && msg.type !== 'jobs') || (activeTab === 'jobs' && msg.type === 'jobs'));
+
     return (
-        <section id="chatbox" className="min-h-screen flex flex-col items-center justify-center bg-black p-4">
-            <h1 className="text-4xl font-serif font-bold text-white text-center mb-4">Chatbox</h1>
-            <p className="text-lg text-gray-400 text-center mb-8 max-w-3xl">Live chat for the Lancerpages community. Chat with lancers and clients, free of cost. Share jobs, gigs, news, resources, tips etc. Please be civil and helpful :)</p>
-            <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg shadow-xl flex-grow flex flex-col p-4 w-full max-w-4xl h-[70vh]">
-                <div className="flex-grow overflow-y-auto mb-4 space-y-4 pr-2">
-                    {loading ? <p className="text-gray-400">Loading messages...</p> : messages.map(msg => (
-                        <div key={msg.id} className={`flex ${msg.uid === user?.uid ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`p-3 rounded-lg max-w-xs md:max-w-md ${msg.uid === user?.uid ? 'bg-[var(--color-accent)] bg-opacity-30' : 'bg-[var(--bg-primary)]'}`}>
-                                <p className="font-bold text-[var(--color-accent)] text-sm flex items-center">
-                                    {msg.name}
-                                    {msg.roles?.client && <span className="ml-2 text-xs bg-blue-500 text-white rounded-full h-5 w-5 flex items-center justify-center">C</span>}
-                                    {msg.roles?.lancer && <span className="ml-1 text-xs bg-green-500 text-white rounded-full h-5 w-5 flex items-center justify-center">L</span>}
-                                </p>
-                                <p className="text-[var(--text-primary)] break-words">{msg.text}</p>
+        <section id="chatbox" className="min-h-screen flex flex-col items-center justify-center bg-primary-background p-4 text-primary-text">
+            <h1 className="text-4xl font-bold text-center mb-4">Community Hub</h1>
+            <p className="text-lg text-secondary-text text-center mb-8 max-w-3xl">Connect with fellow freelancers and clients in real-time.</p>
+            <div className="bg-secondary-background border border-border-color rounded-lg shadow-xl flex flex-col p-4 w-full max-w-4xl h-[70vh]">
+                <div className="flex border-b border-border-color mb-4">
+                    <button onClick={() => setActiveTab('liveChat')} className={`py-2 px-4 ${activeTab === 'liveChat' ? 'border-b-2 border-primary-accent text-primary-accent' : 'text-secondary-text'}`}>Live Chat</button>
+                    <button onClick={() => setActiveTab('jobs')} className={`py-2 px-4 ${activeTab === 'jobs' ? 'border-b-2 border-primary-accent text-primary-accent' : 'text-secondary-text'}`}>Job/Gig Posts</button>
+                </div>
+                <div className="flex-grow overflow-y-auto mb-4 space-y-4 pr-2 scrollbar-thin scrollbar-thumb-primary-accent scrollbar-track-secondary-background">
+                    {loading ? <p className="text-secondary-text">Loading messages...</p> : filteredMessages.map(msg => (
+                        <div key={msg.id} className="flex items-start space-x-3">
+                            <div className="p-3 rounded-lg bg-primary-background w-full">
+                                <div className="flex justify-between items-center mb-1">
+                                    <p className="font-bold text-primary-accent text-sm flex items-center">
+                                        {msg.name}
+                                        {msg.roles?.client && <span className="ml-2 text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Client</span>}
+                                        {msg.roles?.lancer && <span className="ml-1 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Lancer</span>}
+                                    </p>
+                                    <span className="text-xs text-secondary-text">{formatTimestamp(msg.timestamp)}</span>
+                                </div>
+                                <p className="text-primary-text break-words">{msg.text}</p>
                             </div>
                         </div>
                     ))}
                 </div>
-                <div className="border-t border-[var(--border-color)] pt-4">
+                <div className="border-t border-border-color pt-4">
                     {canPost ? (
                         <form onSubmit={handleSendMessage} className="flex space-x-2">
-                            <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type your message..." className="flex-grow bg-[var(--bg-primary)] border border-[var(--border-color)] p-2 rounded-lg text-[var(--text-primary)]" />
-                            <button type="submit" disabled={cooldown > 0} className="bg-[var(--color-accent)] p-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed">{cooldown > 0 ? `${cooldown}s` : 'Send'}</button>
+                            <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type your message..." className="flex-grow bg-primary-background border border-border-color p-2 rounded-lg text-primary-text" />
+                            <button type="submit" disabled={cooldown > 0} className="bg-primary-accent p-2 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed">{cooldown > 0 ? `${cooldown}s` : 'Send'}</button>
                         </form>
-                    ) : ( <div className="text-center p-3 bg-[var(--bg-primary)] rounded-lg text-gray-400">{!user || user.isAnonymous ? "Login to chat." : "Your profile must be approved to post."}</div> )}
+                    ) : ( <div className="text-center p-3 bg-primary-background rounded-lg text-secondary-text">{!user || user.isAnonymous ? "Login to chat." : "Your profile must be approved to post."}</div> )}
                 </div>
             </div>
         </section>
@@ -341,33 +389,14 @@ const DirectorySection = ({ setPage, setSelectedProfileId, authReady }) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [lastVisible, setLastVisible] = useState(null);
     const [hasMore, setHasMore] = useState(true);
+    const [directoryView, setDirectoryView] = useState(false);
     const loaderRef = useRef(null);
 
     // Filter states
-    const [nameFilter, setNameFilter] = useState('');
-    const [keywordFilter, setKeywordFilter] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const [domainFilter, setDomainFilter] = useState('');
-    const [countryFilter, setCountryFilter] = useState('');
-    const [cityFilter, setCityFilter] = useState('');
 
-    const [countries, setCountries] = useState([]);
-    const [cities, setCities] = useState([]);
-
-    useEffect(() => {
-        fetch('https://countriesnow.space/api/v0.1/countries').then(res => res.json()).then(data => setCountries(data.data.sort((a, b) => a.country.localeCompare(b.country))));
-    }, []);
-
-    useEffect(() => {
-        if (countryFilter) {
-            const selected = countries.find(c => c.country === countryFilter);
-            setCities(selected ? selected.cities : []);
-        } else {
-            setCities([]);
-        }
-        setCityFilter('');
-    }, [countryFilter, countries]);
-
-    const fetchFreelancers = useCallback(async (isInitial = false) => {
+    const fetchFreelancers = useCallback(async (isInitial = false, limitCount = 9, searchQuery = '', domainFilter = '') => {
         if (loadingMore || (!isInitial && !hasMore)) return;
         isInitial ? setLoading(true) : setLoadingMore(true);
         try {
@@ -376,95 +405,128 @@ const DirectorySection = ({ setPage, setSelectedProfileId, authReady }) => {
                 where("status", "==", "approved"),
                 where("roles.lancer", "==", true),
                 orderBy("name"),
-                limit(9)
+                limit(limitCount)
             );
-            if (!isInitial && lastVisible) q = query(q, startAfter(lastVisible));
+
+            if (searchQuery) {
+                q = query(q, where('name', '>=', searchQuery), where('name', '<=', searchQuery + '\uf8ff'));
+            }
+
+            if (domainFilter) {
+                q = query(q, where('domains', 'array-contains', domainFilter));
+            }
+
+            if (!isInitial && lastVisible) {
+                q = query(q, startAfter(lastVisible));
+            }
 
             const docSnapshots = await getDocs(q);
             const newFreelancers = docSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setLastVisible(docSnapshots.docs[docSnapshots.docs.length - 1]);
-            setHasMore(newFreelancers.length >= 9);
+            setHasMore(newFreelancers.length >= limitCount);
             setFreelancers(prev => isInitial ? newFreelancers : [...prev, ...newFreelancers]);
         } catch (error) { console.error("Error fetching freelancers: ", error); }
         finally { setLoading(false); setLoadingMore(false); }
-    }, [lastVisible, loadingMore, hasMore]); // Removed appId from here as it's defined globally
+    }, [lastVisible, loadingMore, hasMore]);
 
     useEffect(() => {
-        if(authReady) {
-            fetchFreelancers(true);
+        if (authReady) {
+            fetchFreelancers(true, 3); // Fetch only 3 for homepage preview
         }
-    }, [authReady, fetchFreelancers]);
+    }, [authReady]);
 
-    const handleFilterChange = () => {};
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting && hasMore && !loadingMore && directoryView) {
+                    fetchFreelancers(false, 9, searchQuery, domainFilter);
+                }
+            },
+            { threshold: 1.0 }
+        );
+
+        if (loaderRef.current) {
+            observer.observe(loaderRef.current);
+        }
+
+        return () => {
+            if (loaderRef.current) {
+                observer.unobserve(loaderRef.current);
+            }
+        };
+    }, [loaderRef, hasMore, loadingMore, directoryView, fetchFreelancers, searchQuery, domainFilter]);
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        setFreelancers([]);
+        setDirectoryView(true);
+        fetchFreelancers(true, 9, searchQuery, domainFilter);
+    };
+
+    const handleBrowseMore = () => {
+        setDirectoryView(true);
+        fetchFreelancers(true, 9, searchQuery, domainFilter);
+    };
 
     const viewProfile = (id) => { setSelectedProfileId(id); setPage('viewProfile'); };
 
-    const filteredFreelancers = freelancers.filter(f => {
-        const nameMatch = nameFilter ? f.name?.toLowerCase().includes(nameFilter.toLowerCase()) : true;
-        const keywordMatch = keywordFilter ? f.bio?.toLowerCase().includes(keywordFilter.toLowerCase()) : true;
-        const domainMatch = domainFilter ? f.domains?.includes(domainFilter) : true;
-        const countryMatch = countryFilter ? f.location?.country === countryFilter : true;
-        const cityMatch = cityFilter ? f.location?.city === cityFilter : true;
-        return nameMatch && keywordMatch && domainMatch && countryMatch && cityMatch;
-    });
-
     return (
-        <section id="directory" className="min-h-screen bg-[var(--bg-secondary)] p-4 pt-16 text-[var(--text-primary)]">
+        <section id="directory" className="bg-primary-background p-4 py-16 text-primary-text">
             <div className="container mx-auto">
-                <h1 className="text-4xl font-serif font-bold text-center mb-4">Freelancer Directory</h1>
-                <p className="text-lg opacity-80 text-center mb-8">Find the talent you need.</p>
-                <div className="bg-[var(--bg-primary)] border border-[var(--border-color)] p-6 rounded-lg shadow-lg mb-8">
-                    <form onChange={handleFilterChange} className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
-                        <div>
-                            <label className="block text-sm font-medium opacity-80 mb-1">Name</label>
-                            <input type="text" placeholder="Search by name..." value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] p-2 rounded-md" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium opacity-80 mb-1">Keyword</label>
-                            <input type="text" placeholder="e.g. 'React', 'logo'" value={keywordFilter} onChange={(e) => setKeywordFilter(e.target.value)} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] p-2 rounded-md" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium opacity-80 mb-1">Domain</label>
-                            <select value={domainFilter} onChange={(e) => setDomainFilter(e.target.value)} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] p-2 rounded-md">
-                                <option value="">All Domains</option>
-                                {domainsOfExpertise.map(d => <option key={d} value={d}>{d}</option>)}
-                            </select>
-                        </div>
-                        <div className="md:col-span-1">
-                            <label className="block text-sm font-medium opacity-80 mb-1">Country</label>
-                            <select value={countryFilter} onChange={(e) => setCountryFilter(e.target.value)} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] p-2 rounded-md">
-                                <option value="">All Countries</option>
-                                {countries.map(c => <option key={c.iso2} value={c.country}>{c.country}</option>)}
-                            </select>
-                        </div>
-                        <div className="md:col-span-1">
-                            <label className="block text-sm font-medium opacity-80 mb-1">City</label>
-                             <select value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-color)] p-2 rounded-md" disabled={!countryFilter}>
-                                <option value="">All Cities</option>
-                                {cities.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                        </div>
-                    </form>
-                </div>
+                <h1 className="text-4xl font-bold text-center mb-4">Discover Talented Freelancers</h1>
+                <p className="text-lg text-secondary-text text-center mb-8">Search our curated directory of verified professionals across various domains.</p>
+
+                <form onSubmit={handleSearch} className="bg-secondary-background p-4 rounded-lg shadow-lg mb-8 flex items-center space-x-4">
+                    <input
+                        type="text"
+                        placeholder="Search by name, skills, or location..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-grow bg-primary-background border border-border-color p-3 rounded-md text-primary-text"
+                    />
+                    <select
+                        value={domainFilter}
+                        onChange={(e) => setDomainFilter(e.target.value)}
+                        className="bg-primary-background border border-border-color p-3 rounded-md text-primary-text"
+                    >
+                        <option value="">All Domains</option>
+                        {domainsOfExpertise.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    <button type="submit" className="bg-primary-accent hover:opacity-90 text-white font-bold py-3 px-6 rounded-lg">Search Directory</button>
+                </form>
+
                 {loading ? <p className="text-center">Loading...</p> : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filteredFreelancers.map(f => (
-                             <div key={f.id} className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg shadow-xl overflow-hidden flex flex-col">
+                        {freelancers.map(f => (
+                             <div key={f.id} className="bg-secondary-background border border-border-color rounded-lg shadow-xl overflow-hidden flex flex-col">
                                 <div className="p-6 flex-grow">
-                                    <h3 className="text-2xl font-serif font-bold mb-2">{f.name}</h3>
-                                    <p className="opacity-80 mb-4 h-24 overflow-hidden text-ellipsis">{f.bio}</p>
+                                    <h3 className="text-2xl font-bold mb-2 text-primary-text">{f.name}</h3>
+                                    <p className="text-secondary-text mb-2">{f.location?.city}, {f.location?.country}</p>
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                        {f.domains?.map(d => <span key={d} className="bg-primary-background px-2 py-1 rounded-full text-xs border border-border-color">{d}</span>)}
+                                    </div>
+                                    <p className="text-secondary-text mb-4 h-24 overflow-hidden text-ellipsis">{f.bio}</p>
                                 </div>
-                                <div className="p-6 bg-[var(--bg-secondary)] border-t border-[var(--border-color)]">
-                                    <button onClick={() => viewProfile(f.id)} className="w-full bg-[var(--color-accent)] hover:opacity-90 text-white font-bold py-2 rounded-lg">View Profile</button>
+                                <div className="p-6 bg-primary-background border-t border-border-color">
+                                    <button onClick={() => viewProfile(f.id)} className="w-full bg-primary-accent hover:opacity-90 text-white font-bold py-2 rounded-lg">View Profile</button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
+
                 <div ref={loaderRef} className="h-10 text-center p-4">
                     {loadingMore && <p>Loading more...</p>}
                     {!hasMore && freelancers.length > 0 && <p className="opacity-60">You've reached the end.</p>}
                 </div>
+
+                {!directoryView && (
+                    <div className="text-center mt-8">
+                        <button onClick={handleBrowseMore} className="bg-primary-accent text-white py-3 px-6 rounded-lg hover:bg-opacity-80 transition">
+                            Browse More Freelancers
+                        </button>
+                    </div>
+                )}
             </div>
         </section>
     );
@@ -869,41 +931,9 @@ const PrivacyPolicyPage = ({ setPage }) => (
 
 // --- Main App & Navigation ---
 
-const RightSidebar = ({ user, profile, setPage }) => {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const handleSignOut = async () => { await signOut(auth); setSidebarOpen(false); };
-
-    return (
-        <>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="fixed top-4 right-4 z-50 p-3 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-full text-[var(--text-primary)] lg:hidden">
-                <Menu size={24} />
-            </button>
-            <aside className={`fixed top-0 right-0 h-full bg-[var(--bg-primary)] bg-opacity-95 border-l border-[var(--border-color)] shadow-2xl z-40 p-6 flex flex-col space-y-4 transform transition-transform ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 lg:w-64`}>
-                <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-[var(--text-primary)] lg:hidden"><X size={24}/></button>
-                <h2 className="text-2xl font-serif font-bold text-[var(--color-accent)]">Navigation</h2>
-                <nav className="flex flex-col space-y-3 text-lg flex-grow">
-                    <a href="#home" onClick={()=>setSidebarOpen(false)} className="text-[var(--text-primary)] opacity-80 hover:opacity-100 flex items-center"><ChevronsRight size={16} className="mr-2"/>Home</a>
-                    <a href="#directory" onClick={()=>setSidebarOpen(false)} className="text-[var(--text-primary)] opacity-80 hover:opacity-100 flex items-center"><Search size={16} className="mr-2"/>Directory</a>
-                    <a href="#chatbox" onClick={()=>setSidebarOpen(false)} className="text-[var(--text-primary)] opacity-80 hover:opacity-100 flex items-center"><MessageSquare size={16} className="mr-2"/>Chatbox</a>
-                    {(!user || user.isAnonymous) && <a href="#login" onClick={()=>setSidebarOpen(false)} className="text-[var(--text-primary)] opacity-80 hover:opacity-100 flex items-center"><LogIn size={16} className="mr-2"/>Login</a>}
-                </nav>
-                <div className="border-t border-[var(--border-color)] pt-4 space-y-3">
-                    {user && !user.isAnonymous && (<button onClick={() => setPage('profile')} className="w-full text-left text-[var(--text-primary)] opacity-80 hover:opacity-100 flex items-center"><User size={16} className="mr-2"/>My Profile</button>)}
-                    {profile?.isAdmin && (<button onClick={() => setPage('admin')} className="w-full text-left text-yellow-400 hover:text-yellow-300 flex items-center"><Shield size={16} className="mr-2"/>Admin</button>)}
-                    <button onClick={() => setPage('contact')} className="w-full text-left text-[var(--text-primary)] opacity-80 hover:opacity-100 flex items-center"><Mail size={16} className="mr-2"/>Contact</button>
-                    <button onClick={() => setPage('terms')} className="w-full text-left text-[var(--text-primary)] opacity-80 hover:opacity-100 flex items-center"><FileText size={16} className="mr-2"/>Terms</button>
-                    <button onClick={() => setPage('privacy')} className="w-full text-left text-[var(--text-primary)] opacity-80 hover:opacity-100 flex items-center"><Shield size={16} className="mr-2"/>Privacy</button>
-                </div>
-                {user && !user.isAnonymous && (<button onClick={handleSignOut} className="w-full text-left flex items-center text-red-400 hover:text-red-300 font-bold border-t border-[var(--border-color)] pt-4"><LogOut size={16} className="mr-2"/>Logout</button>)}
-            </aside>
-        </>
-    );
-};
-
-
 const LandingPage = ({ user, profile, setPage, setSelectedProfileId, authReady }) => {
     return (
-        <main className="lg:mr-64 bg-[var(--bg-primary)] pb-16">
+        <main className="bg-primary-background">
             <HomePageBanner />
             <AuthSection user={user} setPage={setPage} />
             <ChatboxSection user={user} profile={profile} authReady={authReady}/>
@@ -916,7 +946,7 @@ export default function App() {
     // Add font styles to the document head
     useEffect(() => {
         const fontLink = document.createElement('link');
-        fontLink.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Sans+Pro:wght@300;400&display=swap";
+        fontLink.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap";
         fontLink.rel = "stylesheet";
         document.head.appendChild(fontLink);
 
@@ -977,20 +1007,25 @@ export default function App() {
         <>
             <style>{`
                 :root {
-                  --bg-primary: rgb(53, 53, 53);
-                  --bg-secondary: rgb(40, 40, 40);
-                  --text-primary: rgb(240, 214, 187);
-                  --color-accent: rgb(160, 138, 127);
-                  --border-color: rgb(80, 80, 80);
+                  --bg-primary: #111827;
+                  --bg-secondary: #1F2937;
+                  --text-primary: #F9FAFB;
+                  --text-secondary: #9CA3AF;
+                  --color-accent: #22c55e;
+                  --border-color: rgba(255, 255, 255, 0.1);
                 }
                 body {
-                    font-family: 'Source Sans Pro', sans-serif;
-                    font-weight: 300;
+                    font-family: 'Inter', sans-serif;
                     background-color: var(--bg-primary);
                     color: var(--text-primary);
                 }
-                h1, h2, h3, h4, h5, h6, .font-serif {
-                    font-family: 'Playfair Display', serif;
+                h1, h2, h3, h4, h5, h6 {
+                    font-family: 'Inter', sans-serif;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+                p {
+                    color: var(--text-secondary);
                 }
                 .form-checkbox, .form-radio {
                     color: var(--color-accent);
@@ -998,13 +1033,27 @@ export default function App() {
                 .form-checkbox:focus, .form-radio:focus, select:focus, input:focus {
                     --tw-ring-color: var(--color-accent) !important;
                 }
+                .scrollbar-thin {
+                    scrollbar-width: thin;
+                    scrollbar-color: var(--color-accent) var(--bg-secondary);
+                }
+                .scrollbar-thin::-webkit-scrollbar {
+                    width: 8px;
+                }
+                .scrollbar-thin::-webkit-scrollbar-track {
+                    background: var(--bg-secondary);
+                }
+                .scrollbar-thin::-webkit-scrollbar-thumb {
+                    background-color: var(--color-accent);
+                    border-radius: 4px;
+                    border: 2px solid var(--bg-secondary);
+                }
             `}</style>
-            <div className="bg-[var(--bg-primary)]">
-                <RightSidebar user={user} profile={profile} setPage={setPage} />
+            <div className="bg-primary-background min-h-screen">
+                <Header user={user} setPage={setPage} />
                 {renderPage()}
-                <div className="fixed bottom-0 left-0 right-0 z-40 lg:mr-64">
+                <div className="fixed bottom-0 left-0 right-0 z-40">
                     <GDPRBanner />
-                    <BottomNavBar user={user} setPage={setPage} />
                 </div>
             </div>
         </>
