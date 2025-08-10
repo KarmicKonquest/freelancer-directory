@@ -77,7 +77,7 @@ const Header = ({ user, setPage }) => {
                 <div className="flex items-center">
                     {user && !user.isAnonymous ? (
                         <>
-                            <button onClick={() => setPage('profile')} className="text-primary-text hover:text-primary-accent mr-4">My Profile</button>
+                            <button onClick={() => setPage('profile')} className="text-primary-text hover:text-primary-accent mr-4">View Profile</button>
                             <button onClick={handleSignOut} className="bg-secondary-background text-primary-text py-2 px-4 rounded-lg hover:bg-opacity-80 transition">Sign Out</button>
                         </>
                     ) : (
@@ -235,10 +235,10 @@ const AuthSection = ({ user, setPage }) => {
                 const userCred = await createUserWithEmailAndPassword(auth, email, password);
                 const newUser = userCred.user;
 
-                const profileData = { email: newUser.email, status: 'pending', chatboxAccess: true, roles, createdAt: serverTimestamp() };
+                const profileData = { email: newUser.email, status: 'approved', chatboxAccess: true, roles, createdAt: serverTimestamp() };
 
                 await setDoc(doc(db, `artifacts/${appId}/users/${newUser.uid}/profile`, 'data'), profileData);
-                await setDoc(doc(db, `artifacts/${appId}/public/data/profiles`, newUser.uid), { email: newUser.email, status: 'pending', roles });
+                await setDoc(doc(db, `artifacts/${appId}/public/data/profiles`, newUser.uid), { email: newUser.email, status: 'approved', roles });
                 setPage('profile');
             }
         } catch (err) { setError(err.message); }
@@ -250,7 +250,7 @@ const AuthSection = ({ user, setPage }) => {
     return (
         <section id="login" className="min-h-screen flex items-center justify-center bg-[var(--bg-secondary)] p-4">
              <div className="max-w-md w-full bg-[var(--bg-primary)] rounded-lg shadow-xl p-8 space-y-6 text-[var(--text-primary)] border border-[var(--border-color)]">
-                <h2 className="text-4xl font-serif font-bold text-center">{isLogin ? "Login" : "Create an Account"}</h2>
+                <h2 className="text-4xl font-bold text-center">{isLogin ? "Login" : "Create an Account"}</h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" required className="w-full bg-[var(--bg-secondary)] p-3 rounded-md border border-[var(--border-color)] focus:ring-[var(--color-accent)]" />
                     <div className="relative">
@@ -402,7 +402,6 @@ const DirectorySection = ({ setPage, setSelectedProfileId, authReady }) => {
         try {
             let q = query(
                 collection(db, `artifacts/${appId}/public/data/profiles`),
-                where("status", "==", "approved"),
                 where("roles.lancer", "==", true),
                 orderBy("name"),
                 limit(limitCount)
@@ -605,7 +604,7 @@ const ProfilePage = ({ user, profile, setPage, setProfile: setAppProfile }) => {
             bio,
             linkedin,
             otherLinks: otherLinks.filter(l => l.value.trim() !== ''),
-            status: profile?.status === 'approved' ? 'approved' : 'pending', // Preserve approved status
+            status: 'approved',
             updatedAt: serverTimestamp(),
             email: user.email,
             createdAt: profile?.createdAt || serverTimestamp() // Preserve original createdAt
@@ -630,8 +629,6 @@ const ProfilePage = ({ user, profile, setPage, setProfile: setAppProfile }) => {
                 <button onClick={() => setPage('home')} className="text-[var(--color-accent)] hover:underline mb-6">&larr; Back Home</button>
                 <div className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg shadow-xl p-8">
                     <h1 className="text-3xl font-serif font-bold mb-6 text-[var(--color-accent)]">Your Profile</h1>
-                    {profile?.status === 'pending' && <div className="bg-yellow-900 border-l-4 border-yellow-500 text-yellow-200 p-4 rounded-md mb-6">Profile pending review by Admin.</div>}
-                    {profile?.status === 'approved' && <div className="bg-green-900 border-l-4 border-green-500 text-green-200 p-4 rounded-md mb-6">Your profile is approved and live!</div>}
 
                     <form onSubmit={handleSubmit} className="space-y-8">
                         <div className="bg-[var(--bg-primary)] p-6 rounded-lg border border-[var(--border-color)]">
@@ -816,11 +813,6 @@ const AdminDashboardPage = ({ setPage, user }) => {
         return () => unsubscribe();
     }, [user]);
 
-    const updateStatus = async (id, status) => {
-        await updateDoc(doc(db, `artifacts/${appId}/public/data/profiles`, id), { status });
-        await updateDoc(doc(db, `artifacts/${appId}/users/${id}/profile`, 'data'), { status }, {merge: true});
-    };
-
     const toggleChatAccess = async (id, currentAccess) => {
         await updateDoc(doc(db, `artifacts/${appId}/users/${id}/profile`, 'data'), { chatboxAccess: !currentAccess }, {merge: true});
     };
@@ -837,19 +829,15 @@ const AdminDashboardPage = ({ setPage, user }) => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs uppercase bg-[var(--bg-primary)]">
-                            <tr><th className="px-4 py-2">Name/Email</th><th className="px-4 py-2">Status</th><th className="px-4 py-2">Roles</th><th className="px-4 py-2">Chat</th><th className="px-4 py-2">Actions</th></tr>
+                            <tr><th className="px-4 py-2">Name/Email</th><th className="px-4 py-2">Roles</th><th className="px-4 py-2">Chat</th><th className="px-4 py-2">Actions</th></tr>
                         </thead>
                         <tbody>
                             {profiles.map(p => (
                                 <tr key={p.id} className="border-b border-[var(--border-color)] hover:bg-[var(--bg-primary)]">
                                     <td className="px-4 py-2">{p.name || 'N/A'}<br/><span className="opacity-70 text-xs">{p.email}</span></td>
-                                    <td className="px-4 py-2">{p.status}</td>
                                     <td className="px-4 py-2">{p.roles?.lancer && 'L '}{p.roles?.client && 'C'}</td>
                                     <td className="px-4 py-2">{p.chatboxAccess ? 'Yes' : 'No'}</td>
                                     <td className="px-4 py-2 space-x-1">
-                                        <select onChange={(e) => updateStatus(p.id, e.target.value)} value={p.status} className="bg-[var(--bg-primary)] border border-[var(--border-color)] p-1 rounded text-xs">
-                                            <option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option>
-                                        </select>
                                         <button onClick={() => toggleChatAccess(p.id, p.chatboxAccess)} className="bg-blue-600 p-1 rounded text-xs">Toggle Chat</button>
                                     </td>
                                 </tr>
